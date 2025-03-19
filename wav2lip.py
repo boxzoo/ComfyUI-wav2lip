@@ -68,7 +68,7 @@ class LoadAudio:
             }
         }
 
-    CATEGORY = "audio"
+    CATEGORY = "Wav2Lip"
 
     RETURN_TYPES = ("AUDIO", )
     FUNCTION = "load"
@@ -93,101 +93,6 @@ class LoadAudio:
             return f"Invalid audio file: {audio}"
         return True
 
-class Wav2LipTrain:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "dataset_path": ("FOLDER", {"description": "训练数据集路径", "folder_path": "./datasets"}),
-                "pretrained_model": ("MODEL", {"default": "", "description": "预训练模型路径（可选）"}),
-                "batch_size": ("INT", {"default": 16, "min": 1, "max": 128}),
-                "learning_rate": ("FLOAT", {"default": 1e-4, "min": 1e-6, "max": 1e-2}),
-                "max_epochs": ("INT", {"default": 100, "min": 1}),
-                "checkpoint_interval": ("INT", {"default": 10, "min": 1}),
-                "freeze_layers": ("STRING", {"default": "encoder.*", "description": "冻结层正则表达式"})
-            }
-        }
-
-    CATEGORY = "ComfyUI/Wav2Lip"
-
-    RETURN_TYPES = ("MODEL",)
-    RETURN_NAMES = ("model",)
-    FUNCTION = "train"
-
-    def train(self, dataset_path, batch_size, learning_rate, max_epochs, checkpoint_interval):
-        import torch.optim as optim
-        from torch.utils.data import DataLoader
-        
-        # 初始化模型
-        model = Wav2Lip().to(device)
-        
-        # 加载预训练权重
-        if pretrained_model:
-            checkpoint = torch.load(pretrained_model)
-            model.load_state_dict(checkpoint['model_state_dict'])
-            
-            # 冻结指定层
-            for name, param in model.named_parameters():
-                if re.match(freeze_layers, name):
-                    param.requires_grad = False
-        
-        # 只优化需要梯度的参数
-        trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-        optimizer = optim.Adam(trainable_params, lr=learning_rate)
-        
-        from .Wav2Lip.wav2lip_node import Wav2Lip
-        from torch.utils.data import Dataset, DataLoader
-        import torch.nn as nn
-        
-        # 创建checkpoints目录
-        checkpoints_path = os.path.join(base_dir, 'checkpoints')
-        os.makedirs(checkpoints_path, exist_ok=True)
-        
-        # 自定义数据集类
-        class LipSyncDataset(Dataset):
-            def __init__(self, dataset_path):
-                self.data = []  # 实现实际的数据加载逻辑
-                
-            def __len__(self):
-                return len(self.data)
-                
-            def __getitem__(self, idx):
-                return self.data[idx]
-        
-        # 初始化模型和优化器
-        model = Wav2Lip().to(device)
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-        criterion = nn.L1Loss()
-        
-        # 加载数据集
-        train_dataset = LipSyncDataset(dataset_path)
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        
-        # 训练循环
-        for epoch in range(max_epochs):
-            model.train()
-            total_loss = 0
-            
-            for batch in train_loader:
-                optimizer.zero_grad()
-                # 实现实际的前向传播和损失计算
-                loss = criterion(None, None)  # 替换实际计算
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-                
-            # 保存检查点
-            if epoch % checkpoint_interval == 0:
-                checkpoint_path = os.path.join(checkpoints_path, f'wav2lip_epoch_{epoch}.pth')
-                torch.save({
-                    'epoch': epoch,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'loss': total_loss/len(train_loader)
-                }, checkpoint_path)
-        
-        return (model,)
-
 class Wav2Lip:
     @classmethod
     def INPUT_TYPES(cls):
@@ -196,13 +101,13 @@ class Wav2Lip:
                 "images": ("IMAGE",),
                 "mode": (["sequential", "repetitive"], {"default": "sequential"}),
                 "face_detect_batch": ("INT", {"default": 8, "min": 1, "max": 100}),
-                "padding": ("STRING", {"default": "0,25,0,0", "description": "Padding values in 'top,bottom,left,right' format (integer values)"}),
+                "padding": ("STRING", {"default": "0,0,0,0", "description": "Padding values in 'top,bottom,left,right' format (integer values)"}),
                 "audio": ("AUDIO", ),
                 "model_type": (["wav2lip_gan", "wav2lip"], {"default": "wav2lip_gan"})
             },
         }
 
-    CATEGORY = "ComfyUI/Wav2Lip"
+    CATEGORY = "Wav2Lip"
 
     RETURN_TYPES = ("IMAGE", "AUDIO", )
     RETURN_NAMES = ("images", "audio", )
