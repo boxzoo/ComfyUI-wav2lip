@@ -50,6 +50,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+Wav2lip/checkpoints/*
 
 # Translations
 *.mo
